@@ -22,7 +22,7 @@ import AuthView from './views/AuthView.tsx';
 
 import { Order, MenuItem, Table, InventoryItem, TableStatus, Room, RoomStatus, Booking, PaymentMethod, Staff, CartItem, Payout, UserRole, AuthCredentials } from './types';
 import { INITIAL_MENU, INITIAL_TABLES, INITIAL_INVENTORY, INITIAL_ROOMS, INITIAL_STAFF } from './constants';
-import { db } from './services/dbservice';
+import { db } from './firebase';
 import { calculateCompleteBill } from './utils/calculations';
 
 const INITIAL_AUTH: AuthCredentials = {
