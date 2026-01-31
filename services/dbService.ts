@@ -1,58 +1,27 @@
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  doc, 
-  updateDoc, 
-  deleteDoc,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase'; // Ye line zaroori hai connection ke liye
+import { db as firebaseDb } from '../firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
-// Data fetch karne ke liye (Live Update)
-export const subscribeToCollection = (collectionName: string, callback: (data: any[]) => void) => {
-  try {
-    const colRef = collection(db, collectionName);
-    return onSnapshot(colRef, (snapshot) => {
-      const data = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      callback(data);
+// Ye 'db' object App.tsx ki zaroorat poori karega
+export const db = {
+  // 1. Data padhne ke liye (LocalStorage se taaki fast ho)
+  get: (key: string, defaultValue: any) => {
+    try {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : defaultValue;
+    } catch (error) {
+      return defaultValue;
+    }
+  },
+
+  // 2. Data save aur sync karne ke liye
+  syncAll: async (data: any) => {
+    // LocalStorage mein save karein (Offline ke liye)
+    Object.keys(data).forEach(key => {
+      try {
+        localStorage.setItem(key, JSON.stringify(data[key]));
+      } catch (e) {}
     });
-  } catch (error) {
-    console.error("Error subscribing:", error);
-    return () => {};
-  }
-};
 
-// Data add karne ke liye
-export const addItem = async (collectionName: string, item: any) => {
-  try {
-    const colRef = collection(db, collectionName);
-    const docRef = await addDoc(colRef, item);
-    return docRef.id;
-  } catch (error) {
-    console.error("Error adding item:", error);
-  }
-};
-
-// Data update karne ke liye
-export const updateItem = async (collectionName: string, id: string, updates: any) => {
-  try {
-    const docRef = doc(db, collectionName, id);
-    await updateDoc(docRef, updates);
-  } catch (error) {
-    console.error("Error updating item:", error);
-  }
-};
-
-// Data delete karne ke liye
-export const deleteItem = async (collectionName: string, id: string) => {
-  try {
-    const docRef = doc(db, collectionName, id);
-    await deleteDoc(docRef);
-  } catch (error) {
-    console.error("Error deleting item:", error);
+    // (Optional: Future mein yahan hum Firebase code jodenge sync ke liye)
   }
 };
