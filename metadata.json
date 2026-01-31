@@ -1,0 +1,5 @@
+{
+  "name": "posease",
+  "description": "A comprehensive, high-performance restaurant POS system with offline-first capabilities, inventory management, table tracking, and AI-driven analytics.",
+  "requestFramePermissions": []
+}

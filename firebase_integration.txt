@@ -1,0 +1,74 @@
+
+DineDash Pro: Enterprise Firebase Integration Guide
+===================================================
+
+Follow these steps to move from local storage to a live, multi-user environment.
+
+1. CLOUD SCHEMA (Firestore Collections)
+----------------------------------------
+A. orders: { items[], tableId, roomId, total, status, timestamp, paymentMethod, customerName, aadhaarNumber }
+B. tables: { number, capacity, status, currentOrderId }
+C. inventory: { name, stock, unit, minLevel, costPrice }
+D. rooms: { number, type, floor, price, status, currentBookingId, image }
+E. bookings: { roomId, guestName, phone, checkIn, expectedCheckOut, checkOut, foodCharges, roomCharges, total, status, aadhaarNumber, paymentMethod }
+F. staff: { name, role, phone, salary, attendance[] }
+G. config: { hotelName, hotelEmail, adminPass, restaurantPass, roomsPass, isConfigured: boolean }
+
+2. GUEST IDENTITY RESOLUTION
+-------------------------------------------
+- Maintain a separate `guest_profiles` collection keyed by `aadhaarNumber`.
+- Use a Cloud Function trigger on `bookings` to update aggregate stats like `total_stays` and `lifetime_value`.
+
+3. ROOM INVENTORY MANAGEMENT
+-----------------------------
+- Ensure `number` is unique via Firestore security rules.
+- Set rooms to `DIRTY` status automatically upon settlement transaction.
+
+4. SETTLEMENT TRANSACTIONS
+----------------------------------------
+Use atomic transactions for multi-document updates:
+```js
+transaction.update(bookingRef, { status: 'COMPLETED' });
+transaction.update(roomRef, { status: 'DIRTY' });
+```
+
+5. SECURITY RULES (RBAC)
+-------------------------
+```js
+match /bookings/{id} {
+  allow read, write: if request.auth.token.role in ['ADMIN', 'ROOMS'];
+}
+match /orders/{id} {
+  allow read, write: if request.auth.token.role in ['ADMIN', 'RESTAURANT'];
+}
+```
+
+6. CLOUD STORAGE (Images)
+-------------------------
+- Menu/Room images stored at `/uploads/{category}/{id}`.
+- Enforce public-read but admin-write rules.
+
+7. FIREBASE AUTHENTICATION
+-------------------------
+- Enable Email/Password provider.
+- Use **Custom Claims** to store the user role (`admin`, `restaurant`, `rooms`).
+- Cloud Function logic:
+```js
+admin.auth().setCustomUserClaims(uid, { role: 'RESTAURANT' });
+```
+
+8. OTP VERIFICATION & MOBILE NOTIFICATIONS
+------------------------------------------
+- CURRENT (DEMO) FLOW:
+  - Local state triggers a `showDemoToast` UI overlay (Mobile Friendly).
+  - OTP is displayed in-app to circumvent browser alert blocking in previews.
+- PRODUCTION (PLANNED) FLOW:
+  1. Frontend writes to `verification_sessions`.
+  2. Cloud Function sends SMS via Twilio or Email via SES.
+  3. FOR MOBILE APPS: Integrate **Firebase Cloud Messaging (FCM)**.
+  4. Trigger a "Data Message" to the device which the app handles to auto-fill the OTP or show a native push notification.
+- SECURITY:
+  - Implement reCAPTCHA Enterprise for mobile to prevent bot-driven OTP spam.
+  - Device-level ID verification to link OTP to a specific hardware instance.
+
+This configuration ensures data integrity for financial records while creating a high-performance, identity-first CRM system.
